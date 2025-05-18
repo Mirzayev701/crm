@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Clothing CRM{% endblock %}
+
+{% block header_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <!-- Total Sales Card -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-primary-500 rounded-md p-3">
+                    <i class="fas fa-dollar-sign text-white"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">
+                            Total Sales
+                        </dt>
+                        <dd class="flex items-baseline">
+                            <div class="text-2xl font-semibold text-gray-900">
+                                ${{ total_sales|floatformat:2 }}
+                            </div>
+                            <div class="ml-2 flex items-baseline text-sm font-semibold {% if total_sales_change >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                                {% if total_sales_change >= 0 %}
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                {% else %}
+                                    <i class="fas fa-arrow-down mr-1"></i>
+                                {% endif %}
+                                {{ total_sales_change|floatformat:1 }}%
+                            </div>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Orders Card -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                    <i class="fas fa-shopping-cart text-white"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">
+                            Total Orders
+                        </dt>
+                        <dd class="flex items-baseline">
+                            <div class="text-2xl font-semibold text-gray-900">
+                                {{ total_orders }}
+                            </div>
+                            <div class="ml-2 flex items-baseline text-sm font-semibold {% if total_orders_change >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                                {% if total_orders_change >= 0 %}
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                {% else %}
+                                    <i class="fas fa-arrow-down mr-1"></i>
+                                {% endif %}
+                                {{ total_orders_change|floatformat:1 }}%
+                            </div>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Card -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                    <i class="fas fa-tshirt text-white"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">
+                            Products
+                        </dt>
+                        <dd class="text-2xl font-semibold text-gray-900">
+                            {{ product_count }}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customers Card -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
+                    <i class="fas fa-users text-white"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">
+                            Customers
+                        </dt>
+                        <dd class="flex items-baseline">
+                            <div class="text-2xl font-semibold text-gray-900">
+                                {{ customer_count }}
+                            </div>
+                            {% if new_customers_today > 0 %}
+                                <div class="ml-2 flex items-baseline text-sm font-semibold text-green-600">
+                                    <i class="fas fa-user-plus mr-1"></i>
+                                    +{{ new_customers_today }} today
+                                </div>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Sales Chart -->
+    <div class="bg-white shadow rounded-lg p-4">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Sales Trend</h2>
+        <div class="h-64">
+            <canvas id="salesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Products Chart -->
+    <div class="bg-white shadow rounded-lg p-4">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Top Products</h2>
+        <div class="h-64">
+            <canvas id="topProductsChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Recent Orders -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                Recent Orders
+            </h3>
+        </div>
+        <div class="bg-white divide-y divide-gray-200">
+            {% for order in recent_orders %}
+                <div class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium text-primary-600 truncate">
+                            {{ order.order_number }}
+                        </p>
+                        <div class="ml-2 flex-shrink-0 flex">
+                            <p class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if order.status == 'delivered' %}bg-green-100 text-green-800
+                                {% elif order.status == 'cancelled' %}bg-red-100 text-red-800
+                                {% elif order.status == 'processing' %}bg-yellow-100 text-yellow-800
+                                {% elif order.status == 'shipped' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ order.get_status_display }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-2 sm:flex sm:justify-between">
+                        <div class="sm:flex">
+                            <p class="flex items-center text-sm text-gray-500">
+                                <i class="fas fa-user flex-shrink-0 mr-1.5 text-gray-400"></i>
+                                {{ order.customer.name }}
+                            </p>
+                        </div>
+                        <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                            <i class="fas fa-calendar flex-shrink-0 mr-1.5 text-gray-400"></i>
+                            <p>
+                                {{ order.order_date|date:"M d, Y" }}
+                            </p>
+                            <p class="ml-4 font-medium text-gray-900">${{ order.total_amount|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <a href="{% url 'order_detail' order.pk %}" class="text-sm text-primary-600 hover:text-primary-900">View details</a>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="px-4 py-4 sm:px-6 text-center text-gray-500">
+                    No recent orders
+                </div>
+            {% endfor %}
+        </div>
+        <div class="bg-gray-50 px-4 py-4 sm:px-6">
+            <a href="{% url 'order_list' %}" class="text-sm font-medium text-primary-600 hover:text-primary-500">
+                View all orders <span aria-hidden="true">&rarr;</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Low Stock Items -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                Low Stock Items
+            </h3>
+        </div>
+        <div class="bg-white divide-y divide-gray-200">
+            {% for item in low_stock_items %}
+                <div class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium text-primary-600 truncate">
+                            {{ item.product.name }}
+                        </p>
+                        <div class="ml-2 flex-shrink-0 flex">
+                            <p class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                Low Stock
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-2 sm:flex sm:justify-between">
+                        <div class="sm:flex">
+                            <p class="flex items-center text-sm text-gray-500">
+                                <i class="fas fa-tag flex-shrink-0 mr-1.5 text-gray-400"></i>
+                                {{ item.product.category.name }}
+                            </p>
+                        </div>
+                        <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                            <p>
+                                <span class="font-medium text-red-600">{{ item.quantity }}</span> in stock
+                                (Restock level: {{ item.restock_level }})
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <a href="{% url 'inventory_edit' item.pk %}" class="text-sm text-primary-600 hover:text-primary-900">Update inventory</a>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="px-4 py-4 sm:px-6 text-center text-gray-500">
+                    No low stock items
+                </div>
+            {% endfor %}
+        </div>
+        <div class="bg-gray-50 px-4 py-4 sm:px-6">
+            <a href="{% url 'inventory_list' %}?stock=low" class="text-sm font-medium text-primary-600 hover:text-primary-500">
+                View all low stock items <span aria-hidden="true">&rarr;</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Sales Chart
+    fetch('{% url "sales_data" %}')
+        .then(response => response.json())
+        .then(data => {
+            const dates = data.map(item => item.date);
+            const amounts = data.map(item => item.amount);
+            
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Sales',
+                        data: amounts,
+                        backgroundColor: 'rgba(14, 165, 233, 0.2)',
+                        borderColor: 'rgba(14, 165, 233, 1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        });
+    
+    // Top Products Chart
+    fetch('{% url "top_products" %}')
+        .then(response => response.json())
+        .then(data => {
+            const products = data.map(item => item.product__name);
+            const quantities = data.map(item => item.total_sold);
+            
+            const ctx = document.getElementById('topProductsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: products,
+                    datasets: [{
+                        label: 'Units Sold',
+                        data: quantities,
+                        backgroundColor: [
+                            'rgba(14, 165, 233, 0.7)',
+                            'rgba(79, 70, 229, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(239, 68, 68, 0.7)'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        });
+</script>
+{% endblock %}
